@@ -6,6 +6,9 @@ import psycopg2
 
 from configuration import POSTGRES_USER_NAME
 from configuration import POSTGRES_LOCATION
+from configuration import DB_NAME
+from configuration import SCHEMA_NAME
+
 
 def create_db(db_name):
     # error_code = local("psql -U {} -c 'CREATE DATABASE {};'".format(POSTGRES_USER_NAME, db_name))
@@ -56,7 +59,7 @@ def stop_postgres(postgres_dir='/usr/local/var/postgres'):
 
 
 @contextlib.contextmanager
-def get_connection(db_name='demodb', user='sethhafferkamp', password=None):
+def get_connection(db_name=DB_NAME, user=POSTGRES_USER_NAME, password=None):
     conn = psycopg2.connect(database=db_name, user=user)
     try:
         yield conn
@@ -73,7 +76,7 @@ def get_connection(db_name='demodb', user='sethhafferkamp', password=None):
 
 
 @contextlib.contextmanager
-def make_cursor(conn_function, db_name='demodb', schema_name=None, user='sethhafferkamp'):
+def make_cursor(conn_function, db_name=DB_NAME, schema_name=SCHEMA_NAME, user=POSTGRES_USER_NAME):
     with conn_function(db_name=db_name, user=user) as connection:
         connection.set_session()
         with connection.cursor() as cursor:
@@ -83,7 +86,7 @@ def make_cursor(conn_function, db_name='demodb', schema_name=None, user='sethhaf
             yield cursor
 
 
-def get_cursor(schema_name=None):
+def get_cursor(db_name=DB_NAME, schema_name=SCHEMA_NAME, user=POSTGRES_USER_NAME):
     return make_cursor(get_connection, schema_name=schema_name)
 
 if __name__ == '__main__':
