@@ -8,6 +8,7 @@ from configuration import POSTGRES_USER_NAME
 from configuration import POSTGRES_LOCATION
 from configuration import DB_NAME
 from configuration import SCHEMA_NAME
+from configuration import POSTGRES_PASSWORD
 
 
 def create_db(db_name):
@@ -59,8 +60,8 @@ def stop_postgres(postgres_dir='/usr/local/var/postgres'):
 
 
 @contextlib.contextmanager
-def get_connection(db_name=DB_NAME, user=POSTGRES_USER_NAME, password=None):
-    conn = psycopg2.connect(database=db_name, user=user)
+def get_connection(db_name=DB_NAME, user=POSTGRES_USER_NAME, password=POSTGRES_PASSWORD):
+    conn = psycopg2.connect(database=db_name, user=user, password=POSTGRES_PASSWORD, host=POSTGRES_LOCATION)
     try:
         yield conn
     except Exception:
