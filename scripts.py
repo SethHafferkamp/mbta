@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import subprocess
 
 from configuration import AWS_EC2_LOCATION
@@ -20,3 +21,7 @@ def scp_file(remote_location, directory, file_name, new_file_name=''):
     command = ' '.join([str(c) for c in args])
     print(command)
     subprocess.call(command, shell=True)
+
+def install_global_requirements():
+    args = ['sudo pip install -r requirements.txt']
+    subprocess.call(args, shell=True)

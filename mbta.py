@@ -1,56 +1,56 @@
 #!/usr/bin/env python2
 import requests
+import logging
 import datetime
+from LatLon import LatLon
+
+MILE_PER_KM = 0.621371
+KM_PER_MILE = 1.60934
 
 from common import get_cursor
-from migrations import insert_activity
+from configuration import SCHEMA_NAME
+
+logger = logging.getLogger(__name__)
 
 
-def get_current_data():
-    # r = requests.get('http://realtime.mbta.com/developer/api/v2/predictionsbyroute?api_key=wX9NwuHnZU2ToO7GmGR9uw&route=Green-B&direction=1&format=json')
-    r = requests.get('http://realtime.mbta.com/developer/api/v2/predictionsbyroutes?api_key=wX9NwuHnZU2ToO7GmGR9uw&routes=Green-b&format=json')
-    json = r.json()['mode'][0]['route'][0]
-    # return json
-    route_id = json.get('route_id')
-    route_name = json.get('route_name')
+def get_all_trip_ids():
+    with get_cursor(SCHEMA_NAME) as cursor:
+        sql ="""
+        SELECT DISTINCT on(trip_id) trip_id, timestamp FROM testtable
+        WHERE char_length(trip_id) < 7
+        """
+        cursor.execute(sql)
+        for result in cursor.fetchall():
+            yield result['trip_id']
 
-    eastbound = json.get('direction')[1]
+def get_trip_by_id(trip_id):
+    with get_cursor(SCHEMA_NAME) as cursor:
+        sql = """
+        SELECT * FROM testtable
+        WHERE trip_id=%(trip_id)s
+        """
+        cursor.execute(sql, dict(trip_id=trip_id))
+        return [dict(row) for row in cursor.fetchall()]
 
-    direction_id = eastbound.get('direction_id')
-    direction_name = eastbound.get('direction_name')
+def get_distance_deltas_miles_from_trip(trip):
+    distance_delta = [0]
+    trip[0]['delta_miles'] = 0
+    for first, second in zip(trip, trip[1:]):
+        distance_delta.append(get_delta_miles(
+                                    first['vehicle_lat'],
+                                    first['vehicle_lon'],
+                                    second['vehicle_lat'],
+                                    second['vehicle_lon']))
+    return distance_delta
 
-    trips = eastbound.get('trip')
+def get_delta_miles(lat1, lon1, lat2, lon2):
+    return LatLon(lat1, lon1).distance(LatLon(lat2, lon2)) * MILE_PER_KM
 
-    # trip_data['datetime'] = datetime.datetime.fromtimestamp(float(trip_data.get('vehicle_timestamp')))
+# def get_completed_trips_for_today():
+#     sql = """
+#     SELECT * FROM testtable
+#     WHERE
 
-
-    data = []
-    for trip in trips:
-        trip_data = trip.get('vehicle')
-        trip_data['route_id'] = route_id
-        trip_data['route_name'] = route_name
-        trip_data['direction_id'] = direction_id
-        trip_data['direction_name'] = direction_name
-        trip_data.update({'trip_id': trip.get('trip_id')})
-        trip_data.update({'trip_name': trip.get('trip_name')})
-        trip_data.update({'trip_headsign': trip.get('trip_headsign')})
-        trip_data.update({'vehicle_timestamp': float(trip_data.get('vehicle_timestamp'))})
-        data.append(trip_data)
-
-# 	data = [trip.get('vehicle').update({'trip_id': trip.get('trip_id')}) for trip in trips]
-
-    rows_inserted = 0
-    duplicates = 0
-    for d in data:
-        if insert_activity(**d):
-            rows_inserted +=1
-        else:
-            duplicates +=1
-    print (str(rows_inserted) + ' rows inserted, ' + str(duplicates) + ' duplicates found')
-
-        # a = requests.post('http://localhost:8000/api/v1/Trip', data=d);
-    # return a
-    # return data
 
 if __name__ == '__main__':
     get_current_data()

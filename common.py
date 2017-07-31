@@ -1,8 +1,11 @@
-#!/usr/local/bin/env python
+#!/usr/local/bin python3
 import contextlib
 import subprocess
-import sys
+from typing import Text
+
 import psycopg2
+from psycopg2.extras import DictCursor
+from sqlalchemy import create_engine
 
 from configuration import POSTGRES_USER_NAME
 from configuration import POSTGRES_LOCATION
@@ -11,56 +14,53 @@ from configuration import SCHEMA_NAME
 from configuration import POSTGRES_PASSWORD
 
 
-def create_db(db_name):
-    # error_code = local("psql -U {} -c 'CREATE DATABASE {};'".format(POSTGRES_USER_NAME, db_name))
-    error_code = do_sql(db_name, command="CREATE DATABASE {};".format(db_name))
-    if error_code:
-        return False
-    return True
+SQLALCHEMY_VERBOSE = True
 
-def create_schema(db_name, schema_name):
-    # error_code = local("psql -U {} -c 'CREATE DATABASE {};'".format(POSTGRES_USER_NAME, db_name))
-    error_code = do_sql(db_name, command="CREATE SCHEMA {};".format(schema_name))
-    if error_code:
-        return False
-    return True
+def connection_string(user_name=POSTGRES_USER_NAME, password=POSTGRES_PASSWORD, location=POSTGRES_LOCATION, db_name=DB_NAME):
+    return 'postgresql://{}:{}@{}/{}'.format(user_name, password, location, db_name)
 
-def drop_schema(db_name, schema_name):
-    # error_code = local("psql -U {} -c 'CREATE DATABASE {};'".format(POSTGRES_USER_NAME, db_name))
-    error_code = do_sql(db_name, command="DROP SCHEMA {};".format(schema_name))
-    if error_code:
-        return False
-    return True
 
-def drop_db(db_name):
-    # error_code = local("psql -U {} -c 'DROP DATABASE {};'".format(POSTGRES_USER_NAME, db_name))
-    error_code = do_sql(db_name, command="DROP DATABASE {};".format(db_name))
-    if error_code:
-        return False
-    return True
+class lazySessionMaker():
+    _Session = None
+
+    @classmethod
+    def get_session(cls, autoflush=True, echo=False):
+        if not cls._Session:
+            from sqlalchemy.orm import sessionmaker
+            cls._Session = sessionmaker(bind=create_engine(connection_string(), echo=echo), autoflush=autoflush)
+        return cls._Session()
+
+@contextlib.contextmanager
+def db_session(autoflush=True, echo=False):
+
+    session = lazySessionMaker.get_session(autoflush=autoflush, echo=echo)
+
+    try:
+        yield session
+    except Exception:
+        session.rollback()
+        raise
+    else:
+        session.commit()
+    finally:
+        session.close()
 
 def do_sql(working_db, server=POSTGRES_LOCATION, user=POSTGRES_USER_NAME, command=''):
+    # type: (Text, Text, Text, Text) -> int
     args = ['psql', '-h', server, '-p', '5432', '-U', user, '-d', working_db, '-c', command]
     print(' '.join(args))
-    subprocess.call(args)
+    return subprocess.call(args)
 
 def local(command_string):
+    # type: (Text) -> bool
     error_code = subprocess.call(command_string, shell=True)
     if error_code:
         return False
     return True
 
-def start_postgres(postgres_dir='/usr/local/var/postgres', log_file='/dev/null'):
-    args = ['pg_ctl', '-D', postgres_dir, '-l', log_file, 'start']
-    subprocess.call(args)
-
-def stop_postgres(postgres_dir='/usr/local/var/postgres'):
-    args = ['pg_ctl', '-D', postgres_dir, 'stop']
-    subprocess.call(args)
-
-
 @contextlib.contextmanager
-def get_connection(db_name=DB_NAME, user=POSTGRES_USER_NAME, password=POSTGRES_PASSWORD):
+def get_connection(*, db_name=DB_NAME, user=POSTGRES_USER_NAME, password=POSTGRES_PASSWORD):
+    # type: (Text, Text, Text) -> Connection
     conn = psycopg2.connect(database=db_name, user=user, password=POSTGRES_PASSWORD, host=POSTGRES_LOCATION)
     try:
         yield conn
@@ -77,20 +77,14 @@ def get_connection(db_name=DB_NAME, user=POSTGRES_USER_NAME, password=POSTGRES_P
 
 
 @contextlib.contextmanager
-def make_cursor(conn_function, db_name=DB_NAME, schema_name=SCHEMA_NAME, user=POSTGRES_USER_NAME):
+def make_cursor(conn_function, *, db_name=DB_NAME, schema_name=SCHEMA_NAME, user=POSTGRES_USER_NAME):
     with conn_function(db_name=db_name, user=user) as connection:
         connection.set_session()
-        with connection.cursor() as cursor:
+        with connection.cursor(cursor_factory=DictCursor) as cursor: #fetchall on a DictCursor returns a list of DictRows, which behave like dictionaries
             if schema_name:
                 print('setting schema name to {}'.format(schema_name))
                 cursor.execute('SET SEARCH_PATH TO %(schema_name)s', dict(schema_name=schema_name))
             yield cursor
 
-
-def get_cursor(db_name=DB_NAME, schema_name=SCHEMA_NAME, user=POSTGRES_USER_NAME):
+def get_cursor(*, db_name=DB_NAME, schema_name=SCHEMA_NAME, user=POSTGRES_USER_NAME):
     return make_cursor(get_connection, schema_name=schema_name)
-
-if __name__ == '__main__':
-    print(sys.argv[1:])
-
-

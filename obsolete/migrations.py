@@ -1,3 +1,9 @@
+###
+###
+#THIS FILE IS UNUSED NOW. I switched from explicit DDL sql to sqlalchemy Table definitions in tables.py
+###
+###
+
 import json
 from datetime import datetime
 
@@ -38,49 +44,6 @@ def create_activities_table():
         """
         print (create_table_schema)
         cursor.execute(create_table_schema)
-
-#IntegrityError duplicate key value violates unique constraint "route_id_timestamp"
-def insert_activity(**kwargs):
-    with get_cursor(SCHEMA_NAME) as cursor:
-        kwargs['timestamp'] = datetime.fromtimestamp(kwargs.get('vehicle_timestamp'))
-        kwargs['_created'] = datetime.now()
-        # print('inserting: ' + json.dumps(kwargs))
-        INSERT_ACTIVITY_SQL = """
-            INSERT INTO testtable (
-            vehicle_lon,
-            vehicle_id,
-            direction_name,
-            vehicle_timestamp,
-            route_name,
-            vehicle_bearing,
-            route_id,
-            trip_name,
-            trip_headsign,
-            vehicle_lat,
-            trip_id,
-            timestamp,
-            _created
-            ) VALUES (
-              %(vehicle_lon)s,
-              %(vehicle_id)s,
-              %(direction_name)s,
-              %(vehicle_timestamp)s,
-              %(route_name)s,
-              %(vehicle_bearing)s,
-              %(route_id)s,
-              %(trip_name)s,
-              %(trip_headsign)s,
-              %(vehicle_lat)s,
-              %(trip_id)s,
-              %(timestamp)s,
-              %(_created)s
-            );"""
-        try:
-            cursor.execute(INSERT_ACTIVITY_SQL, kwargs)
-        except Exception as e:
-            print(e.message)
-            return False
-        return True
 
 def create_unique_index():
     with get_cursor('testschema') as cursor:
