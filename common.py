@@ -42,8 +42,8 @@ def db_session(autoflush=True, echo=False):
         raise
     else:
         session.commit()
-    finally:
-        session.close()
+    # finally:
+        # session.close()
 
 def do_sql(working_db, server=POSTGRES_LOCATION, user=POSTGRES_USER_NAME, command=''):
     # type: (Text, Text, Text, Text) -> int

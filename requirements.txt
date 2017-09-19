@@ -3,3 +3,4 @@ ipython==5.1.0
 LatLon==1.0.2
 SQLAlchemy==1.1.12
 requests==2.18.2
+gpxpy==1.1.2

@@ -1,16 +1,24 @@
 #!/usr/bin/env python2
-import requests
+from typing import List
+
 import logging
 import datetime
-from LatLon import LatLon
 
-MILE_PER_KM = 0.621371
-KM_PER_MILE = 1.60934
+from trip_processing.tables import Trip
+
+
 
 from common import get_cursor
 from configuration import SCHEMA_NAME
 
 logger = logging.getLogger(__name__)
+
+def get_trip_ids_between(session, start_datetime: datetime, end_datetime: datetime) -> List[int]:
+    return session.query(Trip).filter(Trip.trip_start > start_datetime).filter(Trip.trip_start < end_datetime).with_entities(Trip.trip_id).all()
+
+def get_trips_between(session, start_datetime: datetime, end_datetime: datetime):
+    trip_ids = get_trip_ids_between(session, start_datetime, end_datetime)
+
 
 
 def get_all_trip_ids():
@@ -32,19 +40,7 @@ def get_trip_by_id(trip_id):
         cursor.execute(sql, dict(trip_id=trip_id))
         return [dict(row) for row in cursor.fetchall()]
 
-def get_distance_deltas_miles_from_trip(trip):
-    distance_delta = [0]
-    trip[0]['delta_miles'] = 0
-    for first, second in zip(trip, trip[1:]):
-        distance_delta.append(get_delta_miles(
-                                    first['vehicle_lat'],
-                                    first['vehicle_lon'],
-                                    second['vehicle_lat'],
-                                    second['vehicle_lon']))
-    return distance_delta
 
-def get_delta_miles(lat1, lon1, lat2, lon2):
-    return LatLon(lat1, lon1).distance(LatLon(lat2, lon2)) * MILE_PER_KM
 
 # def get_completed_trips_for_today():
 #     sql = """

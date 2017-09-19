@@ -28,7 +28,6 @@ def get_and_insert_current_predictions_by_routes() -> (int, int):
         new_records_count = len(session.new)
 
     updated_records_count = len(list_of_train_activities) - new_records_count
-    logger.info('{} new records inserted, {} rows updated'.format(new_records_count, updated_records_count))
     return new_records_count, updated_records_count
 
 
@@ -62,3 +61,16 @@ def get_current_predictions_by_routes(api_key=API_KEY) -> [TrainActivity]:
         list_of_train_activities.append(TrainActivity(**trip_data))
 
     return list_of_train_activities
+
+
+def get_observations_since(high_water_timestamp=0) -> ([TrainActivity], int):
+    with db_session() as session:
+        observations = session.query(TrainActivity).filter(TrainActivity.vehicle_timestamp > high_water_timestamp)
+        all_obs = observations.all()
+
+        if not all_obs:
+            return None, None
+        new_high_water_mark = max([obs.vehicle_timestamp for obs in observations])
+        session.expunge_all()
+    return all_obs, new_high_water_mark
+

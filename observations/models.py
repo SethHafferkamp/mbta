@@ -1,3 +1,4 @@
+from sqlalchemy import desc
 
 
 class TrainActivity():
@@ -16,3 +17,11 @@ class TrainActivity():
         self.direction_id = direction_id
         self.vehicle_label = vehicle_label
         self.timestamp = timestamp
+
+    @classmethod
+    def for_trip_id(cls, session, trip_id):
+        return session.query(TrainActivity).filter(TrainActivity.trip_id == trip_id).all()
+
+    @classmethod
+    def most_recent_for_trip_id(cls, session, trip_id):
+        return session.query(TrainActivity).filter(TrainActivity.trip_id == trip_id).order_by(desc(TrainActivity.vehicle_timestamp)).limit(1)

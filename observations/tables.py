@@ -5,8 +5,8 @@ from sqlalchemy.orm import mapper
 
 from configuration import SCHEMA_NAME
 from .models import TrainActivity
+from configuration import metadata
 
-metadata = MetaData()
 
 train_activity = Table('train_activity', metadata,
                        Column('vehicle_lon', FLOAT, nullable=False),
@@ -25,7 +25,6 @@ train_activity = Table('train_activity', metadata,
                        PrimaryKeyConstraint('trip_id', 'timestamp', name='train_activity_pk'),
                        schema=SCHEMA_NAME
                        )
-
 
 
 mapper(TrainActivity, train_activity)

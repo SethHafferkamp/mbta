@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 
 from common import connection_string, SQLALCHEMY_VERBOSE, do_sql
 from configuration import DB_NAME, SCHEMA_NAME, LOCAL_ROOT_DB_NAME
-from observations.tables import metadata
+from configuration import metadata
 
 
 def start_postgres(*, postgres_dir='/usr/local/var/postgres', log_file='/dev/null'):
@@ -41,6 +41,8 @@ def create_schema(db_name, schema_name):
 
 def create_tables(metadata):
     # type: (MetaData) -> bool
+    from observations import tables, models
+    from trip_processing import tables, models
     engine = create_engine(connection_string(), echo=SQLALCHEMY_VERBOSE)
     metadata.schema = SCHEMA_NAME
     metadata.bind = engine
